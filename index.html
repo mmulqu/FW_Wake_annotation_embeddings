@@ -507,15 +507,11 @@
             });
         }
 
-        // Fetch small metadata by probing the worker
+        // Fetch small metadata
         async function fetchMeta() {
-            const r = await fetch(`${CONFIG.workerUrl}/search_chunk`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: 'meta_probe', start: 0, count: 1, top_k: 1 })
-            });
-            const x = await r.json();
-            return { dim: x.slice.dim, total_vectors: x.slice.total_vectors };
+            const r = await fetch(`${CONFIG.workerUrl}/meta`);
+            if (!r.ok) throw new Error(`meta failed: ${r.status}`);
+            return await r.json(); // { dim, total_vectors }
         }
 
         function pushMinHeap(heap, item, k) {
