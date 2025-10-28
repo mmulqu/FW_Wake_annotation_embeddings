@@ -516,7 +516,7 @@
             resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Embedding query and searching...</div>';
 
             try {
-                const response = await fetch(CONFIG.workerUrl, {
+                const response = await fetch(`${CONFIG.workerUrl}/search`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
