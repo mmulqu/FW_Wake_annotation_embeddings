@@ -448,8 +448,11 @@
     <script>
         // Configuration
         const CONFIG = {
-            workerUrl: 'https://fw-search-worker.intrinsic3141.workers.dev/search', // Must end with /search
-            totalPages: 628 // Finnegans Wake page count
+            workerUrl: 'https://fw-search-worker.intrinsic3141.workers.dev',
+            totalPages: 628,
+            chunkVectors: null,
+            desiredChunkMB: 50,
+            topK: 20
         };
 
         let currentResults = [];
@@ -504,45 +507,81 @@
             });
         }
 
-        // Search function
+        // Fetch small metadata by probing the worker
+        async function fetchMeta() {
+            const r = await fetch(`${CONFIG.workerUrl}/search_chunk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: 'meta_probe', start: 0, count: 1, top_k: 1 })
+            });
+            const x = await r.json();
+            return { dim: x.slice.dim, total_vectors: x.slice.total_vectors };
+        }
+
+        function pushMinHeap(heap, item, k) {
+            if (heap.length < k) { heap.push(item); heap.sort((a,b)=>a.similarity-b.similarity); }
+            else if (item.similarity > heap[0].similarity) { heap[0] = item; heap.sort((a,b)=>a.similarity-b.similarity); }
+        }
+
+        // Search function (chunked)
         async function search(query) {
             const resultsDiv = document.getElementById('results');
             const statsDiv = document.getElementById('resultsStats');
             const searchBtn = document.getElementById('searchBtn');
 
-            // Show loading
             searchBtn.disabled = true;
             searchBtn.textContent = 'Searching...';
-            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Embedding query and searching...</div>';
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Embedding query and searching in chunks...</div>';
 
             try {
-                const response = await fetch(`${CONFIG.workerUrl}/search`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ query, top_k: 20 })
-                });
+                // 1) get meta
+                const meta = await fetchMeta();
+                const { dim, total_vectors } = meta;
+                const bytesPerVector = dim * 4;
+                const vectorsPerChunk = Math.max(1, Math.floor((CONFIG.desiredChunkMB * 1024 * 1024) / bytesPerVector));
+                CONFIG.chunkVectors = vectorsPerChunk;
 
-                if (!response.ok) {
-                    throw new Error(`Search failed: ${response.status}`);
+                // 2) walk chunks, ask server to score each slice
+                const k = CONFIG.topK;
+                let heap = [];
+                for (let start = 0; start < total_vectors; start += vectorsPerChunk) {
+                    const count = Math.min(vectorsPerChunk, total_vectors - start);
+                    const resp = await fetch(`${CONFIG.workerUrl}/search_chunk`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query, start, count, top_k: k })
+                    });
+                    if (!resp.ok) throw new Error(`chunk ${start}/${total_vectors} failed: ${resp.status}`);
+                    const data = await resp.json();
+                    for (const it of data.results) pushMinHeap(heap, it, k);
+
+                    statsDiv.textContent = `Scanning ${Math.min(start + count, total_vectors)} / ${total_vectors} vectors...`;
                 }
 
-                const data = await response.json();
-                currentResults = data.results;
+                // 3) Get annotations once and map indices → rows
+                const annResp = await fetch(`${CONFIG.workerUrl}/upload/annotations.json?action=get`);
+                const annotations = await annResp.json();
 
-                // Update stats
-                statsDiv.textContent = `Found ${data.results.length} results`;
+                let textLookup = {};
+                try {
+                    const txtResp = await fetch(`${CONFIG.workerUrl}/upload/text_lookup.json?action=get`);
+                    textLookup = await txtResp.json();
+                } catch {}
 
-                // Display results
-                displayResults(data.results);
+                // 4) Produce final results, sorted by similarity desc
+                heap.sort((a,b) => b.similarity - a.similarity);
+                const enriched = heap.map(item => {
+                    const ann = annotations[item.index] || {};
+                    return { ...ann, similarity: item.similarity, wake_text: textLookup[ann.page_line] || null };
+                });
 
-                // Update visualization
-                updatePageViz(data.results);
-
-            } catch (error) {
-                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
-                console.error(error);
+                currentResults = enriched;
+                statsDiv.textContent = `Found ${enriched.length} results`;
+                displayResults(enriched);
+                updatePageViz(enriched);
+            } catch (err) {
+                console.error(err);
+                resultsDiv.innerHTML = `<div class=\"error\">Error: ${err.message}</div>`;
             } finally {
                 searchBtn.disabled = false;
                 searchBtn.textContent = 'Search';
