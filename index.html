@@ -61,6 +61,36 @@
             margin-bottom: 30px;
         }
 
+        .max-results-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .max-results-control label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+
+        .max-results-input {
+            width: 70px;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #3498db;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-family: 'Georgia', serif;
+            transition: all 0.3s;
+        }
+
+        .max-results-input:focus {
+            outline: none;
+            border-color: #5dade2;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
         .search-input {
             width: 100%;
             padding: 15px;
@@ -425,6 +455,17 @@
                        id="searchInput" 
                        class="search-input" 
                        placeholder="Search for themes, motifs, concepts...">
+                
+                <div class="max-results-control">
+                    <label for="maxResultsInput">Max results:</label>
+                    <input type="number" 
+                           id="maxResultsInput" 
+                           class="max-results-input"
+                           min="5" 
+                           max="100" 
+                           value="20">
+                </div>
+                
                 <button id="searchBtn" class="search-btn">Search</button>
             </div>
 
@@ -468,7 +509,6 @@
             totalPages: 628,
             chunkVectors: null,
             desiredChunkMB: 50,
-            topK: 20,
             bookMarkers: [
                 { page: 3, label: "Book I" },
                 { page: 219, label: "Book II" },
@@ -635,6 +675,10 @@
             const resultsDiv = document.getElementById('results');
             const statsDiv = document.getElementById('resultsStats');
             const searchBtn = document.getElementById('searchBtn');
+            const maxResultsInput = document.getElementById('maxResultsInput');
+
+            // Get max results from input, default to 20
+            const maxResults = parseInt(maxResultsInput.value) || 20;
 
             searchBtn.disabled = true;
             searchBtn.textContent = 'Searching...';
@@ -649,7 +693,8 @@
                 CONFIG.chunkVectors = vectorsPerChunk;
 
                 // 2) walk chunks, ask server to score each slice
-                const k = CONFIG.topK;
+                // Request more results than needed to account for duplicates
+                const k = Math.min(maxResults * 3, 100); // Request 3x to ensure we have enough after deduplication
                 let heap = [];
                 for (let start = 0; start < total_vectors; start += vectorsPerChunk) {
                     const count = Math.min(vectorsPerChunk, total_vectors - start);
@@ -684,10 +729,26 @@
                     return { ...ann, similarity: item.similarity, wake_text: wt };
                 });
 
-                currentResults = enriched;
-                statsDiv.textContent = `Found ${enriched.length} results`;
-                displayResults(enriched);
-                updatePageViz(enriched);
+                // 5) Deduplicate by page_line (keep highest similarity for each page_line)
+                const seenPageLines = new Map();
+                const deduplicated = [];
+                
+                for (const result of enriched) {
+                    if (result.page_line) {
+                        if (!seenPageLines.has(result.page_line)) {
+                            seenPageLines.set(result.page_line, true);
+                            deduplicated.push(result);
+                        }
+                    }
+                }
+
+                // 6) Limit to requested number of results
+                const finalResults = deduplicated.slice(0, maxResults);
+
+                currentResults = finalResults;
+                statsDiv.textContent = `Found ${finalResults.length} unique results`;
+                displayResults(finalResults);
+                updatePageViz(finalResults);
             } catch (err) {
                 console.error(err);
                 resultsDiv.innerHTML = `<div class="error">Error: ${err.message}</div>`;
