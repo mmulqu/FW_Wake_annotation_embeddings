@@ -568,7 +568,9 @@
                 heap.sort((a,b) => b.similarity - a.similarity);
                 const enriched = heap.map(item => {
                     const ann = annotations[item.index] || {};
-                    return { ...ann, similarity: item.similarity, wake_text: textLookup[ann.page_line] || null };
+                    const entry = textLookup[ann.page_line];
+                    const wt = typeof entry === "string" ? entry : (entry?.text ?? null);
+                    return { ...ann, similarity: item.similarity, wake_text: wt };
                 });
 
                 currentResults = enriched;
