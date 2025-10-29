@@ -333,7 +333,6 @@
         }
 
         .wake-text {
-            flex: 1;
             font-size: 1.05em;
             line-height: 1.8;
             color: #d0d0d0;
@@ -572,7 +571,15 @@
         function showTooltip(event, page) {
             const tooltip = document.getElementById('pageTooltip');
             const marker = CONFIG.bookMarkers.find(m => m.page === page);
-            tooltip.textContent = marker ? `Page ${page} - ${marker.label}` : `Page ${page}`;
+            const line = pageElements[page];
+            const count = line.dataset.resultCount;
+            
+            let text = marker ? `Page ${page} - ${marker.label}` : `Page ${page}`;
+            if (count) {
+                text += `: ${count} result${count > 1 ? 's' : ''}`;
+            }
+            
+            tooltip.textContent = text;
             tooltip.classList.add('visible');
             updateTooltipPosition(event);
         }
@@ -623,36 +630,10 @@
                     }
                     
                     line.setAttribute('class', className);
-                }
-            });
-
-            // Update tooltip text to show result counts
-            Object.keys(pageElements).forEach(page => {
-                const line = pageElements[page];
-                const count = pageCounts[page];
-                if (count) {
                     line.dataset.resultCount = count;
                 }
             });
         }
-
-        // Update showTooltip to include result count
-        const originalShowTooltip = showTooltip;
-        showTooltip = function(event, page) {
-            const tooltip = document.getElementById('pageTooltip');
-            const marker = CONFIG.bookMarkers.find(m => m.page === page);
-            const line = pageElements[page];
-            const count = line.dataset.resultCount;
-            
-            let text = marker ? `Page ${page} - ${marker.label}` : `Page ${page}`;
-            if (count) {
-                text += `: ${count} result${count > 1 ? 's' : ''}`;
-            }
-            
-            tooltip.textContent = text;
-            tooltip.classList.add('visible');
-            updateTooltipPosition(event);
-        };
 
         // Fetch small metadata
         async function fetchMeta() {
