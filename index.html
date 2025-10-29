@@ -305,7 +305,7 @@
         /* Right Panel - Wake Text */
         .right-panel {
             background: #1a1a1a;
-            padding: 20px;
+            padding: 15px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -315,27 +315,27 @@
             position: sticky;
             top: 0;
             background: #1a1a1a;
-            padding-bottom: 15px;
+            padding-bottom: 10px;
             border-bottom: 2px solid #3498db;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             z-index: 10;
         }
 
         .text-title {
-            font-size: 1.3em;
+            font-size: 1.2em;
             color: #3498db;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
 
         .text-location {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #7f8c8d;
         }
 
         .wake-text {
             flex: 1;
-            font-size: 1.1em;
-            line-height: 1.9;
+            font-size: 1.05em;
+            line-height: 1.8;
             color: #d0d0d0;
             font-family: 'Georgia', serif;
             white-space: pre-wrap;
@@ -349,28 +349,30 @@
 
         .wake-text .context-line {
             color: #7f8c8d;
-            margin: 10px 0;
+            margin: 8px 0;
             font-style: italic;
+            font-size: 0.9em;
         }
 
         .annotation-context {
             background: #252525;
             border-left: 3px solid #2ecc71;
-            padding: 15px;
-            margin: 20px 0;
+            padding: 10px 12px;
+            margin: 10px 0;
             border-radius: 0 8px 8px 0;
         }
 
         .annotation-label {
-            font-size: 0.85em;
+            font-size: 0.75em;
             color: #2ecc71;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
 
         .annotation-text {
             color: #bdc3c7;
-            line-height: 1.6;
+            line-height: 1.4;
+            font-size: 0.95em;
         }
 
         /* Loading & Status */
@@ -495,7 +497,7 @@
                 <div class="text-location" id="textLocation"></div>
             </div>
             <div id="wakeText" class="wake-text">
-                <div style="text-align: center; color: #7f8c8d; padding: 60px 20px;">
+                <div style="text-align: center; color: #7f8c8d; padding: 40px 20px; font-size: 0.95em;">
                     Click on a search result to view the original Finnegans Wake text with annotation context.
                 </div>
             </div>
@@ -810,7 +812,7 @@
                 
                 <div class="context-line">— Original Text —</div>
                 
-                <div style="margin-top: 20px; color: #7f8c8d;">
+                <div style="margin-top: 5px; color: #7f8c8d;">
                     Loading context...
                 </div>
             `;
@@ -855,15 +857,15 @@
                     
                     <div class="context-line">— Original Text —</div>
                     
-                    <div style="margin-top: 20px; line-height: 1.9;">
+                    <div style="margin-top: 5px; line-height: 1.8;">
                 `;
 
                 if (contextLines.length > 0) {
                     contextLines.forEach(line => {
                         if (line.isTarget) {
-                            textHTML += `<div style="margin: 5px 0;"><span class="highlight">${line.text}</span></div>`;
+                            textHTML += `<div style="margin: 3px 0;"><span class="highlight">${line.text}</span></div>`;
                         } else {
-                            textHTML += `<div style="margin: 5px 0; color: #b0b0b0;">${line.text}</div>`;
+                            textHTML += `<div style="margin: 3px 0; color: #b0b0b0;">${line.text}</div>`;
                         }
                     });
                 } else {
@@ -879,7 +881,7 @@
                             
                             <div class="context-line">— View Full Text —</div>
                             
-                            <div style="margin-top: 20px; text-align: center;">
+                            <div style="margin-top: 10px; text-align: center;">
                                 <a href="http://www.finnegansweb.com/wiki/index.php/${result.page_line}" 
                                    target="_blank"
                                    style="color: #3498db; font-size: 1.1em;">
@@ -904,7 +906,7 @@
                     
                     <div class="context-line">— Original Text —</div>
                     
-                    <div style="margin-top: 20px; text-align: center;">
+                    <div style="margin-top: 10px; text-align: center;">
                         <a href="http://www.finnegansweb.com/wiki/index.php/${result.page_line}" 
                            target="_blank"
                            style="color: #3498db; font-size: 1.1em;">
