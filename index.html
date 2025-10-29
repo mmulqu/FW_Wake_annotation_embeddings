@@ -308,7 +308,6 @@
         .right-panel {
             background: #1a1a1a;
             padding: 0;
-            overflow-y: auto;
             width: 450px;
             flex-shrink: 0;
             align-self: flex-start;
@@ -316,6 +315,7 @@
 
         .right-panel-content {
             padding: 15px;
+            background: #1e1e1e;
         }
 
         .text-header {
@@ -356,7 +356,7 @@
 
         .wake-text .context-line {
             color: #7f8c8d;
-            margin: 8px 0;
+            margin: 5px 0;
             font-style: italic;
             font-size: 0.9em;
         }
@@ -364,8 +364,8 @@
         .annotation-context {
             background: #252525;
             border-left: 3px solid #2ecc71;
-            padding: 10px 12px;
-            margin: 10px 0;
+            padding: 8px 10px;
+            margin: 5px 0;
             border-radius: 0 8px 8px 0;
         }
 
@@ -373,7 +373,7 @@
             font-size: 0.75em;
             color: #2ecc71;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
 
         .annotation-text {
@@ -840,16 +840,12 @@
                 }
 
                 // Build the display HTML
-                let textHTML = `
-                    <div class="annotation-context">
-                        <div class="annotation-label">📝 Annotation</div>
-                        <div class="annotation-text">${result.content}</div>
-                    </div>
-                    
-                    <div class="context-line">— Original Text —</div>
-                    
-                    <div style="margin-top: 5px; line-height: 1.8;">
-                `;
+                let textHTML = `<div class="annotation-context">
+<div class="annotation-label">📝 Annotation</div>
+<div class="annotation-text">${result.content}</div>
+</div>
+<div class="context-line">— Original Text —</div>
+<div style="margin-top: 5px; line-height: 1.5;">`;
 
                 if (contextLines.length > 0) {
                     contextLines.forEach(line => {
@@ -864,22 +860,16 @@
                     if (result.wake_text) {
                         textHTML += `<span class="highlight">${result.wake_text}</span>`;
                     } else {
-                        textHTML = `
-                            <div class="annotation-context">
-                                <div class="annotation-label">📝 Annotation</div>
-                                <div class="annotation-text">${result.content}</div>
-                            </div>
-                            
-                            <div class="context-line">— View Full Text —</div>
-                            
-                            <div style="margin-top: 10px; text-align: center;">
-                                <a href="http://www.finnegansweb.com/wiki/index.php/${result.page_line}" 
-                                   target="_blank"
-                                   style="color: #3498db; font-size: 1.1em;">
-                                    View on FinnegansWeb →
-                                </a>
-                            </div>
-                        `;
+                        textHTML = `<div class="annotation-context">
+<div class="annotation-label">📝 Annotation</div>
+<div class="annotation-text">${result.content}</div>
+</div>
+<div class="context-line">— View Full Text —</div>
+<div style="margin-top: 10px; text-align: center;">
+<a href="http://www.finnegansweb.com/wiki/index.php/${result.page_line}" 
+   target="_blank"
+   style="color: #3498db; font-size: 1.1em;">View on FinnegansWeb →</a>
+</div>`;
                     }
                 }
 
