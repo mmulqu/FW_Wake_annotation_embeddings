@@ -132,53 +132,66 @@
             border-radius: 8px;
             padding: 15px;
             display: flex;
-            align-items: flex-end;
-            gap: 1px;
-            overflow-x: auto;
+            align-items: center;
+            justify-content: center;
             border: 1px solid #34495e;
+            position: relative;
+            min-height: 300px;
         }
 
-        .page-bar {
-            flex: 1;
-            min-width: 2px;
-            background: #3a3a3a;
+        #pageCircle {
+            width: 100%;
+            height: 100%;
+            max-width: 300px;
+            max-height: 300px;
+        }
+
+        .page-line {
+            stroke: #3a3a3a;
+            stroke-width: 1;
             transition: all 0.3s;
             cursor: pointer;
-            position: relative;
         }
 
-        .page-bar.hit {
-            background: linear-gradient(to top, #27ae60, #2ecc71);
-            box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+        .page-line.book-marker {
+            stroke: #555;
+            stroke-width: 3;
         }
 
-        .page-bar.hit-intense {
-            background: linear-gradient(to top, #16a085, #1abc9c);
-            box-shadow: 0 0 8px rgba(26, 188, 156, 0.8);
+        .page-line.hit {
+            stroke: #2ecc71;
+            stroke-width: 2;
+            filter: drop-shadow(0 0 3px rgba(46, 204, 113, 0.6));
         }
 
-        .page-bar:hover {
-            background: #3498db;
-            transform: scaleX(1.5);
+        .page-line.hit-intense {
+            stroke: #1abc9c;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 5px rgba(26, 188, 156, 0.9));
         }
 
-        .page-tooltip {
+        .page-line:hover {
+            stroke: #3498db;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.8));
+        }
+
+        .tooltip-overlay {
             position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
             background: #2c3e50;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.8em;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
             white-space: nowrap;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.2s;
-            z-index: 100;
+            z-index: 1000;
+            color: #ecf0f1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         }
 
-        .page-bar:hover .page-tooltip {
+        .tooltip-overlay.visible {
             opacity: 1;
         }
 
@@ -417,8 +430,11 @@
 
             <div class="page-viz-container">
                 <div class="page-viz-title">Page Distribution</div>
-                <div class="page-viz-subtitle">Green bars = pages with matching themes</div>
-                <div id="pageVisualization"></div>
+                <div class="page-viz-subtitle">Green lines = pages with matching themes</div>
+                <div id="pageVisualization">
+                    <svg id="pageCircle" viewBox="0 0 300 300"></svg>
+                </div>
+                <div class="tooltip-overlay" id="pageTooltip"></div>
             </div>
         </div>
 
@@ -452,37 +468,96 @@
             totalPages: 628,
             chunkVectors: null,
             desiredChunkMB: 50,
-            topK: 20
+            topK: 20,
+            bookMarkers: [
+                { page: 3, label: "Book I" },
+                { page: 219, label: "Book II" },
+                { page: 403, label: "Book III" },
+                { page: 593, label: "Book IV" }
+            ]
         };
 
         let currentResults = [];
+        let pageElements = {};
 
-        // Initialize page visualization
+        // Initialize circular page visualization
         function initPageViz() {
-            const vizContainer = document.getElementById('pageVisualization');
-            vizContainer.innerHTML = '';
+            const svg = document.getElementById('pageCircle');
+            svg.innerHTML = '';
+            pageElements = {};
 
+            const centerX = 150;
+            const centerY = 150;
+            const innerRadius = 80;
+            const outerRadius = 130;
+            const markerOuterRadius = 140;
+
+            // Create lines for each page
             for (let i = 1; i <= CONFIG.totalPages; i++) {
-                const bar = document.createElement('div');
-                bar.className = 'page-bar';
-                bar.dataset.page = i;
-                bar.style.height = '100%';
+                // Calculate angle (starting at top, going clockwise)
+                const angle = ((i - 1) / CONFIG.totalPages) * 2 * Math.PI - Math.PI / 2;
                 
-                const tooltip = document.createElement('div');
-                tooltip.className = 'page-tooltip';
-                tooltip.textContent = `Page ${i}`;
-                bar.appendChild(tooltip);
+                // Check if this is a book marker
+                const isMarker = CONFIG.bookMarkers.some(m => m.page === i);
+                const outerR = isMarker ? markerOuterRadius : outerRadius;
                 
-                vizContainer.appendChild(bar);
+                // Calculate line endpoints
+                const x1 = centerX + innerRadius * Math.cos(angle);
+                const y1 = centerY + innerRadius * Math.sin(angle);
+                const x2 = centerX + outerR * Math.cos(angle);
+                const y2 = centerY + outerR * Math.sin(angle);
+                
+                // Create line element
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('class', isMarker ? 'page-line book-marker' : 'page-line');
+                line.dataset.page = i;
+                
+                // Add hover events for tooltip
+                line.addEventListener('mouseenter', (e) => showTooltip(e, i));
+                line.addEventListener('mousemove', (e) => updateTooltipPosition(e));
+                line.addEventListener('mouseleave', hideTooltip);
+                
+                svg.appendChild(line);
+                pageElements[i] = line;
             }
+        }
+
+        // Tooltip functions
+        function showTooltip(event, page) {
+            const tooltip = document.getElementById('pageTooltip');
+            const marker = CONFIG.bookMarkers.find(m => m.page === page);
+            tooltip.textContent = marker ? `Page ${page} - ${marker.label}` : `Page ${page}`;
+            tooltip.classList.add('visible');
+            updateTooltipPosition(event);
+        }
+
+        function updateTooltipPosition(event) {
+            const tooltip = document.getElementById('pageTooltip');
+            const vizContainer = document.getElementById('pageVisualization');
+            const rect = vizContainer.getBoundingClientRect();
+            tooltip.style.left = (event.clientX - rect.left + 10) + 'px';
+            tooltip.style.top = (event.clientY - rect.top + 10) + 'px';
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('pageTooltip');
+            tooltip.classList.remove('visible');
         }
 
         // Update page visualization based on results
         function updatePageViz(results) {
-            // Reset all bars
-            document.querySelectorAll('.page-bar').forEach(bar => {
-                bar.className = 'page-bar';
-            });
+            // Reset all lines
+            for (let i = 1; i <= CONFIG.totalPages; i++) {
+                const line = pageElements[i];
+                if (line) {
+                    const isMarker = CONFIG.bookMarkers.some(m => m.page === i);
+                    line.setAttribute('class', isMarker ? 'page-line book-marker' : 'page-line');
+                }
+            }
 
             // Count hits per page
             const pageCounts = {};
@@ -491,32 +566,68 @@
                 pageCounts[page] = (pageCounts[page] || 0) + 1;
             });
 
-            // Update bars
+            // Update lines with hit information
             Object.entries(pageCounts).forEach(([page, count]) => {
-                const bar = document.querySelector(`.page-bar[data-page="${page}"]`);
-                if (bar) {
+                const line = pageElements[page];
+                if (line) {
+                    const isMarker = CONFIG.bookMarkers.some(m => m.page === parseInt(page));
+                    let className = 'page-line';
+                    if (isMarker) className += ' book-marker';
+                    
                     if (count >= 3) {
-                        bar.className = 'page-bar hit-intense';
+                        className += ' hit-intense';
                     } else {
-                        bar.className = 'page-bar hit';
+                        className += ' hit';
                     }
                     
-                    const tooltip = bar.querySelector('.page-tooltip');
-                    tooltip.textContent = `Page ${page}: ${count} results`;
+                    line.setAttribute('class', className);
+                }
+            });
+
+            // Update tooltip text to show result counts
+            Object.keys(pageElements).forEach(page => {
+                const line = pageElements[page];
+                const count = pageCounts[page];
+                if (count) {
+                    line.dataset.resultCount = count;
                 }
             });
         }
+
+        // Update showTooltip to include result count
+        const originalShowTooltip = showTooltip;
+        showTooltip = function(event, page) {
+            const tooltip = document.getElementById('pageTooltip');
+            const marker = CONFIG.bookMarkers.find(m => m.page === page);
+            const line = pageElements[page];
+            const count = line.dataset.resultCount;
+            
+            let text = marker ? `Page ${page} - ${marker.label}` : `Page ${page}`;
+            if (count) {
+                text += `: ${count} result${count > 1 ? 's' : ''}`;
+            }
+            
+            tooltip.textContent = text;
+            tooltip.classList.add('visible');
+            updateTooltipPosition(event);
+        };
 
         // Fetch small metadata
         async function fetchMeta() {
             const r = await fetch(`${CONFIG.workerUrl}/meta`);
             if (!r.ok) throw new Error(`meta failed: ${r.status}`);
-            return await r.json(); // { dim, total_vectors }
+            return await r.json();
         }
 
         function pushMinHeap(heap, item, k) {
-            if (heap.length < k) { heap.push(item); heap.sort((a,b)=>a.similarity-b.similarity); }
-            else if (item.similarity > heap[0].similarity) { heap[0] = item; heap.sort((a,b)=>a.similarity-b.similarity); }
+            if (heap.length < k) { 
+                heap.push(item); 
+                heap.sort((a,b)=>a.similarity-b.similarity); 
+            }
+            else if (item.similarity > heap[0].similarity) { 
+                heap[0] = item; 
+                heap.sort((a,b)=>a.similarity-b.similarity); 
+            }
         }
 
         // Search function (chunked)
@@ -579,7 +690,7 @@
                 updatePageViz(enriched);
             } catch (err) {
                 console.error(err);
-                resultsDiv.innerHTML = `<div class=\"error\">Error: ${err.message}</div>`;
+                resultsDiv.innerHTML = `<div class="error">Error: ${err.message}</div>`;
             } finally {
                 searchBtn.disabled = false;
                 searchBtn.textContent = 'Search';
@@ -615,8 +726,13 @@
             });
         }
 
-        // Display Wake text with annotation
-        function displayWakeText(result) {
+        // Helper function to format page_line string
+        function formatPageLine(page, lineNum) {
+            return `${String(page).padStart(3, '0')}.${String(lineNum).padStart(2, '0')}`;
+        }
+
+        // Display Wake text with annotation and context
+        async function displayWakeText(result) {
             const textTitle = document.getElementById('textTitle');
             const textLocation = document.getElementById('textLocation');
             const wakeTextDiv = document.getElementById('wakeText');
@@ -624,9 +740,53 @@
             textTitle.textContent = `Finnegans Wake · ${result.page_line}`;
             textLocation.textContent = `Page ${result.page}, Line ${result.line_num}`;
 
-            // If we have the Wake text from backend
-            if (result.wake_text) {
-                wakeTextDiv.innerHTML = `
+            // Show loading state
+            wakeTextDiv.innerHTML = `
+                <div class="annotation-context">
+                    <div class="annotation-label">📝 Annotation</div>
+                    <div class="annotation-text">${result.content}</div>
+                </div>
+                
+                <div class="context-line">— Original Text —</div>
+                
+                <div style="margin-top: 20px; color: #7f8c8d;">
+                    Loading context...
+                </div>
+            `;
+
+            try {
+                // Fetch text_lookup if we don't have it cached
+                if (!window.textLookupCache) {
+                    const txtResp = await fetch(`${CONFIG.workerUrl}/upload/text_lookup.json?action=get`);
+                    window.textLookupCache = await txtResp.json();
+                }
+                
+                const textLookup = window.textLookupCache;
+                
+                // Get context lines (2 before, target, 2 after)
+                const contextLines = [];
+                const targetPage = result.page;
+                const targetLine = result.line_num;
+                
+                for (let offset = -2; offset <= 2; offset++) {
+                    const lineNum = targetLine + offset;
+                    if (lineNum > 0) { // Don't go below line 1
+                        const pageLine = formatPageLine(targetPage, lineNum);
+                        const entry = textLookup[pageLine];
+                        const text = typeof entry === "string" ? entry : (entry?.text ?? null);
+                        
+                        if (text) {
+                            contextLines.push({
+                                pageLine: pageLine,
+                                text: text,
+                                isTarget: offset === 0
+                            });
+                        }
+                    }
+                }
+
+                // Build the display HTML
+                let textHTML = `
                     <div class="annotation-context">
                         <div class="annotation-label">📝 Annotation</div>
                         <div class="annotation-text">${result.content}</div>
@@ -634,19 +794,54 @@
                     
                     <div class="context-line">— Original Text —</div>
                     
-                    <div style="margin-top: 20px;">
-                        <span class="highlight">${result.wake_text}</span>
-                    </div>
+                    <div style="margin-top: 20px; line-height: 1.9;">
                 `;
-            } else {
-                // Fallback: link to external source
+
+                if (contextLines.length > 0) {
+                    contextLines.forEach(line => {
+                        if (line.isTarget) {
+                            textHTML += `<div style="margin: 5px 0;"><span class="highlight">${line.text}</span></div>`;
+                        } else {
+                            textHTML += `<div style="margin: 5px 0; color: #b0b0b0;">${line.text}</div>`;
+                        }
+                    });
+                } else {
+                    // Fallback to just the single line if available
+                    if (result.wake_text) {
+                        textHTML += `<span class="highlight">${result.wake_text}</span>`;
+                    } else {
+                        textHTML = `
+                            <div class="annotation-context">
+                                <div class="annotation-label">📝 Annotation</div>
+                                <div class="annotation-text">${result.content}</div>
+                            </div>
+                            
+                            <div class="context-line">— View Full Text —</div>
+                            
+                            <div style="margin-top: 20px; text-align: center;">
+                                <a href="http://www.finnegansweb.com/wiki/index.php/${result.page_line}" 
+                                   target="_blank"
+                                   style="color: #3498db; font-size: 1.1em;">
+                                    View on FinnegansWeb →
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+
+                textHTML += `</div>`;
+                wakeTextDiv.innerHTML = textHTML;
+
+            } catch (err) {
+                console.error("Error loading context:", err);
+                // Fallback display
                 wakeTextDiv.innerHTML = `
                     <div class="annotation-context">
                         <div class="annotation-label">📝 Annotation</div>
                         <div class="annotation-text">${result.content}</div>
                     </div>
                     
-                    <div class="context-line">— View Full Text —</div>
+                    <div class="context-line">— Original Text —</div>
                     
                     <div style="margin-top: 20px; text-align: center;">
                         <a href="http://www.finnegansweb.com/wiki/index.php/${result.page_line}" 
