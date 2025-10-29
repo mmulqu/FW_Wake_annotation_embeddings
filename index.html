@@ -55,6 +55,7 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            height: 100%;
         }
 
         .search-box {
@@ -231,6 +232,7 @@
             padding: 20px;
             overflow-y: auto;
             border-right: 1px solid #3498db;
+            height: 100%;
         }
 
         .results-header {
@@ -307,6 +309,7 @@
             background: #1a1a1a;
             padding: 15px;
             overflow-y: auto;
+            align-self: start;
         }
 
         .text-header {
@@ -461,7 +464,7 @@
                            id="maxResultsInput" 
                            class="max-results-input"
                            min="5" 
-                           max="100" 
+                           max="500" 
                            value="20">
                 </div>
                 
@@ -675,7 +678,7 @@
 
                 // 2) walk chunks, ask server to score each slice
                 // Request more results than needed to account for duplicates
-                const k = Math.min(maxResults * 3, 100); // Request 3x to ensure we have enough after deduplication
+                const k = maxResults * 2; // Request 2x to ensure we have enough after deduplication
                 let heap = [];
                 for (let start = 0; start < total_vectors; start += vectorsPerChunk) {
                     const count = Math.min(vectorsPerChunk, total_vectors - start);
