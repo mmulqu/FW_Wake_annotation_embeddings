@@ -41,8 +41,7 @@
 
         /* Main Container */
         .container {
-            display: grid;
-            grid-template-columns: 350px 1fr 450px;
+            display: flex;
             height: calc(100vh - 200px);
             gap: 0;
         }
@@ -55,7 +54,8 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            height: 100%;
+            width: 350px;
+            flex-shrink: 0;
         }
 
         .search-box {
@@ -232,7 +232,7 @@
             padding: 20px;
             overflow-y: auto;
             border-right: 1px solid #3498db;
-            height: 100%;
+            flex: 1;
         }
 
         .results-header {
@@ -307,9 +307,15 @@
         /* Right Panel - Wake Text */
         .right-panel {
             background: #1a1a1a;
-            padding: 15px;
+            padding: 0;
             overflow-y: auto;
-            align-self: start;
+            width: 450px;
+            flex-shrink: 0;
+            align-self: flex-start;
+        }
+
+        .right-panel-content {
+            padding: 15px;
         }
 
         .text-header {
@@ -335,10 +341,11 @@
 
         .wake-text {
             font-size: 1.05em;
-            line-height: 1.8;
+            line-height: 1.6;
             color: #d0d0d0;
             font-family: 'Georgia', serif;
             white-space: pre-wrap;
+            display: block;
         }
 
         .wake-text .highlight {
@@ -492,13 +499,15 @@
 
         <!-- Right Panel: Wake Text -->
         <div class="right-panel">
-            <div class="text-header">
-                <div class="text-title" id="textTitle">Select a result to view text</div>
-                <div class="text-location" id="textLocation"></div>
-            </div>
-            <div id="wakeText" class="wake-text">
-                <div style="text-align: center; color: #7f8c8d; padding: 40px 20px; font-size: 0.95em;">
-                    Click on a search result to view the original Finnegans Wake text with annotation context.
+            <div class="right-panel-content">
+                <div class="text-header">
+                    <div class="text-title" id="textTitle">Select a result to view text</div>
+                    <div class="text-location" id="textLocation"></div>
+                </div>
+                <div id="wakeText" class="wake-text">
+                    <div style="text-align: center; color: #7f8c8d; padding: 20px 15px; font-size: 0.95em;">
+                        Click on a search result to view the original Finnegans Wake text with annotation context.
+                    </div>
                 </div>
             </div>
         </div>
